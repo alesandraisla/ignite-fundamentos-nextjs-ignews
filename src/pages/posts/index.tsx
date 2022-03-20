@@ -3,31 +3,36 @@ import { getPrismicClient } from '../../services/prismic';
 import styles from './styles.module.scss';
 import Prismic from '@prismicio/client'
 import { GetStaticProps } from 'next';
+import { RichText } from 'prismic-dom';
 
+type Post = {
+    slug: string;
+    title: string;
+    excerpt: string;
+    updatedAt: string;
+}
+interface PostsProps {
+    posts: Post[];
+}
 
-export default function Posts() {
+export default function Posts({ posts }: PostsProps) {
     return(
         <>
             <Head>
                 <title>Posts | Ignews </title>
             </Head>
+
             <main className={styles.container}>
                 <div className={styles.posts}>
-                    <a href='#'>
-                        <time>12 de março de 2022</time>
-                        <strong>Lorem ipsum dolor sit amet consectetur adipisicing elit. </strong>
-                        <p>Porro necessitatibus labore accusamus ab possimus esse enim tenetur! Quas quasi harum, soluta, accusantium aliquid ipsam aperiam perferendis commodi ut dolore nihil.</p>
+
+                    { posts.map((post) => (
+                        <a key={post.slug}>
+                        <time>{post.updatedAt}</time>
+                        <strong>{post.title}</strong>
+                        <p>{post.excerpt}</p>
                     </a>
-                    <a href='#'>
-                        <time>12 de março de 2022</time>
-                        <strong>Lorem ipsum dolor sit amet consectetur adipisicing elit. </strong>
-                        <p>Porro necessitatibus labore accusamus ab possimus esse enim tenetur! Quas quasi harum, soluta, accusantium aliquid ipsam aperiam perferendis commodi ut dolore nihil.</p>
-                    </a>
-                    <a href='#'>
-                        <time>12 de março de 2022</time>
-                        <strong>Lorem ipsum dolor sit amet consectetur adipisicing elit. </strong>
-                        <p>Porro necessitatibus labore accusamus ab possimus esse enim tenetur! Quas quasi harum, soluta, accusantium aliquid ipsam aperiam perferendis commodi ut dolore nihil.</p>
-                    </a>
+                    ))}
+                    
                 </div>
             </main>
         </>
@@ -36,16 +41,28 @@ export default function Posts() {
 
 export const getStaticProps: GetStaticProps = async () => {
     const prismic = getPrismicClient()
-
-    const response = await prismic.query([
-            Prismic.predicates.at('document.type', 'publication')
+    // Faz uma buscar no prismic, em que o tipo do documento é publication. predicates é como se fosse um where do banco de dados
+    const response = await prismic.query<any>([
+            Prismic.predicates.at('document.type', 'post')
     ], {
-            fetch: [ 'publication.title', 'publication.content'],
+            fetch: [ 'post.title', 'post.content'],
             pageSize: 100,
     })
 
-        console.log(JSON.stringify(response,null, 2))
+    const posts = response.results.map(post => {
+        return {
+            slug: post.uid,
+            title: RichText.asText(post.data.title),
+            excerpt: post.data.content.find((content: any) => content.type === 'paragraph')?.text ?? '',
+            updatedAt: new Date(post.last_publication_date).toLocaleDateString('pt-BR', {
+                day: '2-digit',
+                month: 'long',
+                year: 'numeric'
+            })
+        };
+    });
+        // console.log(JSON.stringify(response,null, 2))
     return {
-        props: {}
+        props: {posts}
     }
 }

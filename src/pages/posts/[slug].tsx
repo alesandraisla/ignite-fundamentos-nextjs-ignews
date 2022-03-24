@@ -38,6 +38,15 @@ export const getServerSideProps: GetServerSideProps = async ({ req, params}) => 
     //recuperando sessao do usuário
     const session = await getSession({ req });
     const { slug } = params;
+    //Quando o usuário não tem sessao ativa
+    if(!session.activeSubscription) {
+        return {
+            redirect: {
+                destination: '/',
+                permanent: false,
+            }
+        }
+    }
 
     const prismic = getPrismicClient(req);
 

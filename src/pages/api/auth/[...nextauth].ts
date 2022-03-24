@@ -19,6 +19,42 @@ export default NextAuth({
     //retorna o login do usuario 
     // o dado vai para o fauna no campo collections
     callbacks: {
+        //session permite modificar os dados do session
+        async session({session}) {
+            try {
+                const userActiveSubscription = await fauna.query(
+                    query.Get(
+                        query.Intersection([
+                            query.Match(
+                                query.Index('subscription_by_user_ref'),
+                                query.Select(
+                                    "ref",
+                                    query.Get(
+                                        query.Match(
+                                            query.Index('user_by_email'),
+                                            query.Casefold(session.user.email)
+                                        )
+                                    )
+                                )
+                            ),
+                            query.Match(
+                                query.Index('subscription_by_status'),
+                                "active"
+                            )
+                        ])
+                    )
+                )
+                return {
+                    ...session,
+                    activeSubscription: userActiveSubscription
+                };
+            } catch {
+                return {
+                    ...session,
+                    activeSubscription: null
+                }
+            }
+        },
         async signIn({ user, account, profile}) {
             const { email } = user;
 
